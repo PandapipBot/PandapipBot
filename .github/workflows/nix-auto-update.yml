@@ -42,7 +42,7 @@ jobs:
           git config --global user.email "gavinnjohn+githubrobot@gmail.com"
           git remote add upstream "https://github.com/${{ env.UPSTREAM_NIXPKGS_REPO }}.git"
           git remote set-url origin "https://github.com/${{ env.PERSONAL_NIXPKGS_REPO }}.git"
-          gh repo set-default upstream
+          gh repo set-default ${{ env.UPSTREAM_NIXPKGS_REPO }}
 
       - name: Get current version
         id: get_current
