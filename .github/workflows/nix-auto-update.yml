@@ -80,12 +80,9 @@ jobs:
         if: steps.check_diff.outputs.changed == 'true'
         id: check_pr
         run: |
-          pkg="${{ matrix.package }}"
-          old="${{ steps.get_current.outputs.version }}"
-          new="${{ steps.get_new.outputs.version }}"
-          prs=$(gh pr list --search "is:open sort:created-desc" --limit 500 --json number,title,author --jq '.[] | select(.title | contains("->")) | select(.title | startswith("${pkg}:"))')
+          prs=$(gh pr list --search "is:open sort:created-desc" --limit 500 --json number,title,author --jq '.[] | select(.title | contains("->")) | select(.title | startswith("${{ matrix.package }}:"))')
 
-          if echo "$prs"; then
+          if [ -n "$prs" ]; then
             my_pr=$(echo "$prs" | jq -r --arg user "$USERNAME" 'select(.author.login == $user) | .number')
             if [ -n "$my_pr" ]; then
               echo "Updating existing PR #$my_pr"
