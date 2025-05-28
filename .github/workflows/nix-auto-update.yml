@@ -20,7 +20,8 @@ jobs:
         package: [ gpredict-unstable ]
 
     env:
-      NIXPKGS_REPO: PandapipBot/nixpkgs
+      PERSONAL_NIXPKGS_REPO: PandapipBot/nixpkgs
+      UPSTREAM_NIXPKGS_REPO: NixOS/nixpkgs
       BRANCH_PREFIX: auto-update/
       USERNAME: PandapipBot
       GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
@@ -32,13 +33,16 @@ jobs:
       - name: Checkout nixpkgs
         uses: actions/checkout@v4
         with:
-          repository: ${{ env.NIXPKGS_REPO }}
+          repository: ${{ env.UPSTREAM_NIXPKGS_REPO }}
           token: ${{ secrets.GH_TOKEN }}
 
-      - name: Set up Git
+      - name: Configure Git and GitHub CLIs
         run: |
-          git config user.name "PandapipBot"
-          git config user.email "gavinnjohn+githubrobot@gmail.com"
+          git config --global user.name "PandapipBot"
+          git config --global user.email "gavinnjohn+githubrobot@gmail.com"
+          git remote add upstream "https://github.com/${{ env.UPSTREAM_NIXPKGS_REPO }}.git"
+          git remote set-url origin "https://github.com/${{ env.PERSONAL_NIXPKGS_REPO }}.git"
+          gh repo set-default upstream
 
       - name: Get current version
         id: get_current
