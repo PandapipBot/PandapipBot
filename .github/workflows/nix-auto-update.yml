@@ -25,6 +25,7 @@ jobs:
       BRANCH_PREFIX: auto-update/
       USERNAME: PandapipBot
       GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+      GH_DEBUG: "1"
 
     steps:
       - name: Install Nix
