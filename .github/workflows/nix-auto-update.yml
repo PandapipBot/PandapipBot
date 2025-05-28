@@ -65,7 +65,7 @@ jobs:
         if: steps.check_diff.outputs.changed == 'true'
         id: get_new
         run: |
-          new_version=$(nix-instantiate --eval -E "with import ./. {}; lib.getVersion ${{ matrix.package} }" | tr -d '"')
+          new_version=$(nix-instantiate --eval -E "with import ./. {}; lib.getVersion ${{ matrix.package }}" | tr -d '"')
           echo "version=$new_version" >> $GITHUB_OUTPUT
 
       - name: Ensure version was set
