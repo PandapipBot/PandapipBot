@@ -26,8 +26,6 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
     steps:
-      - uses: wimpysworld/nothing-but-nix@main
-
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
 
@@ -36,7 +34,6 @@ jobs:
         with:
           repository: ${{ env.NIXPKGS_REPO }}
           token: ${{ secrets.GH_TOKEN }}
-          fetch-depth: 0
 
       - name: Set up Git
         run: |
