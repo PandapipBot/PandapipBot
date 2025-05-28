@@ -126,7 +126,7 @@ jobs:
             gh pr create \
               --title "$TITLE" \
               --body "$BODY" \
-              --head "${{ env.BRANCH_PREFIX }}${{ matrix.package }}-${{ steps.get_new.outputs.version }}" \
+              --head "origin:${{ env.BRANCH_PREFIX }}${{ matrix.package }}-${{ steps.get_new.outputs.version }}" \
               --base master
           fi
         env:
