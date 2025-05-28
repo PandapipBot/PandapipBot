@@ -43,7 +43,7 @@ jobs:
       - name: Get current version
         id: get_current
         run: |
-          current_version=$(nix-instantiate --eval -E "with import ./. {}; lib.getVersion ${matrix.package}" | tr -d '"')
+          current_version=$(nix-instantiate --eval -E "with import ./. {}; lib.getVersion ${{ matrix.package }}" | tr -d '"')
           echo "version=$current_version" >> $GITHUB_OUTPUT
 
       - name: Run update.nix
@@ -65,8 +65,16 @@ jobs:
         if: steps.check_diff.outputs.changed == 'true'
         id: get_new
         run: |
-          new_version=$(nix-instantiate --eval -E "with import ./. {}; lib.getVersion ${matrix.package}" | tr -d '"')
+          new_version=$(nix-instantiate --eval -E "with import ./. {}; lib.getVersion ${{ matrix.package} }" | tr -d '"')
           echo "version=$new_version" >> $GITHUB_OUTPUT
+
+      - name: Ensure version was set
+        if: steps.check_diff.outputs.changed == 'true'
+        run: |
+          if [ -z "${{ steps.get_new.outputs.version }}" ]; then
+            echo "❌ New version not set. Exiting."
+            exit 1
+          fi
 
       - name: Check existing PRs
         if: steps.check_diff.outputs.changed == 'true'
