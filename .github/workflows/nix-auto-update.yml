@@ -109,7 +109,7 @@ jobs:
             let branch = `${process.env.BRANCH_PREFIX}${{ matrix.package }}-${{ steps.get_new.outputs.version }}`;
 
             for (const pr of prs) {
-              if (pr.title.startsWith(`${packagePrefix}`) && pr.title.includes('->')) {
+              if (pr.title.startsWith(`${packagePrefix}:`) && pr.title.includes('->')) {
                 console.log(`Found PR:`);
                 console.dir(pr);
                 prFound = true;
@@ -119,9 +119,6 @@ jobs:
                   branch = pr.head.ref;
                   break;
                 }
-              } else {
-                console.log(`The following PR has been ignored:`);
-                console.dir(pr);
               }
             }
 
