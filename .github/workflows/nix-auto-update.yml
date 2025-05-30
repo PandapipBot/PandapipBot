@@ -144,8 +144,8 @@ jobs:
 
               FETCH_DEPTH=$(( FETCH_DEPTH * 2 ))
               echo "Fetching to depth $FETCH_DEPTH"
-              git fetch --depth $FETCH_DEPTH $ORIGIN_REPO "$BRANCH"
-              git fetch --depth $FETCH_DEPTH $UPSTREAM_REPO "$UPSTREAM"
+              git fetch --depth $FETCH_DEPTH origin "${{ steps.check_pr.outputs.branch }}"
+              git fetch --depth $FETCH_DEPTH upstream "${{ env.UPSTREAM_DEFAULT_BRANCH }}"
             done
 
             git checkout -b "${{ steps.check_pr.outputs.branch }}" "origin/${{ steps.check_pr.outputs.branch }}"
