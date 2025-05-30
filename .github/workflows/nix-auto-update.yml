@@ -61,7 +61,7 @@ jobs:
         id: get_current
         run: |
           set -euo pipefail
-          current_version=$(nix-instantiate --eval -E "with import ./. {}; lib.getVersion ${matrix.package}" | tr -d '"')
+          current_version=$(nix-instantiate --eval -E "with import ./. {}; lib.getVersion ${{ matrix.package }}" | tr -d '"')
           echo "version=$current_version" >> $GITHUB_OUTPUT
 
       - name: Run update.nix (1st pass)
