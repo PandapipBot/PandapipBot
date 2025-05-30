@@ -45,7 +45,7 @@ jobs:
 
       - name: Configure Git CLI
         run: |
-          set -euo pipefail
+          set -xeuo pipefail
           git config --global user.name "${{ env.USERNAME }}"
           git config --global user.email "{{ env.EMAIL }}"
           git config --global merge.conflictStyle diff3
@@ -60,19 +60,19 @@ jobs:
       - name: Get current version
         id: get_current
         run: |
-          set -euo pipefail
+          set -xeuo pipefail
           current_version=$(nix-instantiate --eval -E "with import ./. {}; lib.getVersion ${{ matrix.package }}" | tr -d '"')
           echo "version=$current_version" >> $GITHUB_OUTPUT
 
       - name: Run update.nix (1st pass)
         run: |
-          set -euo pipefail
+          set -xeuo pipefail
           nix-shell maintainers/scripts/update.nix --argstr package "${{ matrix.package }}" --argstr skip-prompt true
 
       - name: Get new version
         id: get_new
         run: |
-          set -euo pipefail
+          set -xeuo pipefail
           version=$(nix-instantiate --eval -E "with import ./. {}; lib.getVersion ${{ matrix.package }}" | tr -d '"')
           echo "version=$version" >> $GITHUB_OUTPUT
           git checkout .
@@ -132,16 +132,18 @@ jobs:
 
       - name: Switch to branch
         run: |
-          set -euo pipefail
+          set -xeuo pipefail
           if [[ "${{ steps.check_pr.outputs.my_pr_found }}" == "true" ]]; then
             echo "Existing PR branch exists. Rebasing..."
             git fetch --depth=1 origin "${{ steps.check_pr.outputs.branch }}"
             git fetch --depth=1 upstream "${{ env.UPSTREAM_DEFAULT_BRANCH }}"
             git checkout -b "${{ steps.check_pr.outputs.branch }}" upstream/"${{ env.UPSTREAM_DEFAULT_BRANCH }}"
-      
+
             BASE=$(git merge-base origin/${{ steps.check_pr.outputs.branch }} upstream/${{ env.UPSTREAM_DEFAULT_BRANCH }})
+            echo "Merge base: $BASE"
             COMMITS=$(git rev-list --reverse $BASE..origin/${{ steps.check_pr.outputs.branch }})
-      
+            echo "Commits to apply: $COMMITS"
+
             for commit in $COMMITS; do
               echo "Cherry-picking $commit..."
               if ! git cherry-pick "$commit" --strategy=mergiraf; then
@@ -158,13 +160,13 @@ jobs:
 
       - name: Run update.nix (2nd pass)
         run: |
-          set -euo pipefail
+          set -xeuo pipefail
           nix-shell maintainers/scripts/update.nix --argstr package "${{ matrix.package }}" --argstr skip-prompt true
 
       - name: Check diff
         id: check_diff
         run: |
-          set -euo pipefail
+          set -xeuo pipefail
           if git diff --quiet; then
             echo "no changes, skipping."
             echo "changed=false" >> $GITHUB_OUTPUT
@@ -175,14 +177,14 @@ jobs:
       - name: Commit changes
         if: steps.check_diff.outputs.changed == 'true'
         run: |
-          set -euo pipefail
+          set -xeuo pipefail
           git add -u
           git commit -m "${{ matrix.package }}: ${{ steps.get_current.outputs.version }} -> ${{ steps.get_new.outputs.version }}"
 
       - name: Push changes
         if: steps.check_diff.outputs.changed == 'true' || steps.check_pr.outputs.my_pr_found == 'true'
         run: |
-          set -euo pipefail
+          set -xeuo pipefail
           git push -u origin "${{ steps.check_pr.outputs.branch }}" --force
 
       - name: Create or update PR
