@@ -137,7 +137,8 @@ jobs:
             echo "Existing PR branch exists. Rebasing..."
             git fetch --depth=1 origin "${{ steps.check_pr.outputs.branch }}"
             git checkout -b "${{ steps.check_pr.outputs.branch }}" upstream/"${{ env.UPSTREAM_DEFAULT_BRANCH }}"
-            if ! git cherry-pick origin/"${{ steps.check_pr.outputs.branch }}" --strategy=mergiraf; then
+            BASE=$(git merge-base "origin/${{ steps.check_pr.outputs.branch }}" "upstream/${{ env.UPSTREAM_DEFAULT_BRANCH }}")
+            if ! git cherry-pick "$BASE..origin/${{ steps.check_pr.outputs.branch }}" --strategy=mergiraf; then
               echo "Rebase failed. Showing git status and diff:"
               git status
               git diff
