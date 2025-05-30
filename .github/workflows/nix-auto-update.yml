@@ -86,40 +86,44 @@ jobs:
             const [owner, repo] = process.env.UPSTREAM_NIXPKGS_REPO.split("/");
             const packagePrefix = `${{ matrix.package }}:`;
 
-            const prs = [];
-            let page = 1;
-            let fetchedPRs;
-            
-            do {
-              fetchedPRs = await github.rest.pulls.list({
-                owner,
-                repo,
-                state: 'open',
-                per_page: 100,
-                page,
-              });
-              prs.push(...fetchedPRs.data);
-              page++;
-            } while (fetchedPRs.data.length === 100);
-
-
             let prFound = false;
             let myPrFound = false;
             let existingPr = "";
             let branch = `${process.env.BRANCH_PREFIX}${{ matrix.package }}-${{ steps.get_new.outputs.version }}`;
 
-            for (const pr of prs) {
-              if (pr.title.startsWith(`${packagePrefix}:`) && pr.title.includes('->')) {
-                console.log(`Found PR:`);
-                console.dir(pr);
-                prFound = true;
-                if (pr.user.login === process.env.USERNAME) {
-                  myPrFound = true;
-                  existingPr = pr.number.toString();
-                  branch = pr.head.ref;
-                  break;
+            let page = 1;
+            const perPage = 100;
+
+            while (true) {
+              const fetchedPRs = await github.rest.pulls.list({
+                owner,
+                repo,
+                state: 'open',
+                per_page: perPage,
+                page,
+              });
+
+              for (const pr of fetchedPRs.data) {
+                if (pr.title.startsWith(`${packagePrefix}:`) && pr.title.includes('->')) {
+                  console.log(`Found PR:`);
+                  console.dir(pr);
+                  prFound = true;
+                  if (pr.user.login === process.env.USERNAME) {
+                    myPrFound = true;
+                    existingPr = pr.number.toString();
+                    branch = pr.head.ref;
+                    break;
+                  }
+                } else {
+                  console.log(`Ignoring PR: ${pr.number}`);
                 }
               }
+
+              if (myPrFound || fetchedPRs.data.length < perPage) {
+                break;
+              }
+
+              page++;
             }
 
             core.setOutput("pr_found", prFound.toString());
