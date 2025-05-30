@@ -84,7 +84,6 @@ jobs:
           github-token: ${{ secrets.GH_TOKEN }}
           script: |
             const [owner, repo] = process.env.UPSTREAM_NIXPKGS_REPO.split("/");
-            const packagePrefix = `${{ matrix.package }}:`;
 
             let prFound = false;
             let myPrFound = false;
@@ -104,7 +103,7 @@ jobs:
               });
 
               for (const pr of fetchedPRs.data) {
-                if (pr.title.startsWith(`${packagePrefix}:`) && pr.title.includes('->')) {
+                if (pr.title.startsWith(`${{ matrix.package }}:`) && pr.title.includes('->')) {
                   console.log(`Found PR:`);
                   console.dir(pr);
                   prFound = true;
