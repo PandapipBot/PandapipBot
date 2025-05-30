@@ -136,14 +136,21 @@ jobs:
           if [[ "${{ steps.check_pr.outputs.my_pr_found }}" == "true" ]]; then
             echo "Existing PR branch exists. Rebasing..."
             git fetch --depth=1 origin "${{ steps.check_pr.outputs.branch }}"
+            git fetch --depth=1 upstream "${{ env.UPSTREAM_DEFAULT_BRANCH }}"
             git checkout -b "${{ steps.check_pr.outputs.branch }}" upstream/"${{ env.UPSTREAM_DEFAULT_BRANCH }}"
-            BASE=$(git merge-base "origin/${{ steps.check_pr.outputs.branch }}" "upstream/${{ env.UPSTREAM_DEFAULT_BRANCH }}")
-            if ! git cherry-pick "$BASE..origin/${{ steps.check_pr.outputs.branch }}" --strategy=mergiraf; then
-              echo "Rebase failed. Showing git status and diff:"
-              git status
-              git diff
-              exit 1
-            fi
+      
+            BASE=$(git merge-base origin/${{ steps.check_pr.outputs.branch }} upstream/${{ env.UPSTREAM_DEFAULT_BRANCH }})
+            COMMITS=$(git rev-list --reverse $BASE..origin/${{ steps.check_pr.outputs.branch }})
+      
+            for commit in $COMMITS; do
+              echo "Cherry-picking $commit..."
+              if ! git cherry-pick "$commit" --strategy=mergiraf; then
+                echo "Conflict applying commit $commit"
+                git status
+                git diff
+                exit 1
+              fi
+            done
           else
             echo "Branch does not exist. Creating new from upstream/master..."
             git checkout -b "${{ steps.check_pr.outputs.branch }}" upstream/master
