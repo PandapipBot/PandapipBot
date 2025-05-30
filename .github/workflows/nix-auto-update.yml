@@ -39,11 +39,61 @@ jobs:
 
       - name: Configure Git and GitHub CLIs
         run: |
-          git config --global user.name "PandapipBot"
+          git config --global user.name "${{ env.USERNAME }}"
           git config --global user.email "gavinnjohn+githubrobot@gmail.com"
           git remote add upstream "https://github.com/${{ env.UPSTREAM_NIXPKGS_REPO }}.git"
           git remote set-url origin "https://github.com/${{ env.PERSONAL_NIXPKGS_REPO }}.git"
-          gh repo set-default ${{ env.UPSTREAM_NIXPKGS_REPO }}
+
+      - name: Check existing PRs
+        id: check_pr
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_TOKEN }}
+          script: |
+            const [owner, repo] = process.env.UPSTREAM_NIXPKGS_REPO.split("/");
+            const packagePrefix = `${{ matrix.package }}:`;
+
+            const prs = await github.rest.pulls.list({
+              owner,
+              repo,
+              state: 'open',
+              per_page: 100,
+            });
+
+            let prFound = false;
+            let myPrFound = false;
+            let existingPr = "";
+            let branch = `${process.env.BRANCH_PREFIX}${{ matrix.package }}-${{ steps.get_new.outputs.version }}`;
+
+            for (const pr of prs.data) {
+              if (pr.title.startsWith(packagePrefix) && pr.title.includes('->')) {
+                prFound = true;
+                if (pr.user.login === process.env.USERNAME) {
+                  myPrFound = true;
+                  existingPr = pr.number.toString();
+                  branch = pr.head.ref;
+                  break;
+                }
+              }
+            }
+
+            core.setOutput("pr_found", prFound.toString());
+            core.setOutput("my_pr_found", myPrFound.toString());
+            core.setOutput("branch", branch);
+            core.setOutput("existing_pr", existingPr);
+
+      - name: Switch to branch
+        run: |
+          if [[ ${{ steps.check_pr.outputs.my_pr_found }} ]]; then
+            echo "Existing PR branch exists. Rebasing..."
+            git fetch "origin/${{ steps.check_pr.outputs.branch }}"
+            git fetch upstream/master
+            git checkout "origin/${{ steps.check_pr.outputs.branch }}"
+            git rebase upstream/master
+          else
+            echo "Branch does not exist. Creating new from upstream/master..."
+            git checkout -b "${{ steps.check_pr.outputs.branch }}" upstream/master
+          fi
 
       - name: Get current version
         id: get_current
@@ -67,59 +117,24 @@ jobs:
           fi
 
       - name: Get new version
-        if: steps.check_diff.outputs.changed == 'true'
+        if: steps.check_diff.outputs.changed == 'true' || steps.check_pr.outputs.my_pr_found == 'true'
         id: get_new
         run: |
           new_version=$(nix-instantiate --eval -E "with import ./. {}; lib.getVersion ${{ matrix.package }}" | tr -d '"')
           echo "version=$new_version" >> $GITHUB_OUTPUT
 
-      - name: Check existing PRs
-        if: steps.check_diff.outputs.changed == 'true'
-        id: check_pr
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GH_TOKEN }}
-          script: |
-            const [owner, repo] = process.env.UPSTREAM_NIXPKGS_REPO.split("/");
-            const packagePrefix = `${{ matrix.package }}:`;
-
-            const prs = await github.rest.pulls.list({
-              owner,
-              repo,
-              state: 'open',
-              per_page: 100,
-            });
-
-            let prFound = false;
-            let myPrFound = false;
-            let existingPr = "";
-
-            for (const pr of prs.data) {
-              if (pr.title.startsWith(packagePrefix) && pr.title.includes('->')) {
-                prFound = true;
-                if (pr.user.login === process.env.USERNAME) {
-                  myPrFound = true;
-                  existingPr = pr.number.toString();
-                  break;
-                }
-              }
-            }
-
-            core.setOutput("pr_found", prFound.toString());
-            core.setOutput("my_pr_found", myPrFound.toString());
-            core.setOutput("existing_pr", existingPr);
-
-      - name: Create branch and commit changes
+      - name: Commit changes
         if: steps.check_diff.outputs.changed == 'true'
         run: |
-          new_branch="${{ env.BRANCH_PREFIX }}${{ matrix.package }}-${{ steps.get_new.outputs.version }}"
-          git checkout -b "$new_branch"
           git add -u
           git commit -m "${{ matrix.package }}: ${{ steps.get_current.outputs.version }} -> ${{ steps.get_new.outputs.version }}"
-          git push -u origin "$new_branch" --force
+
+      - name: Push changes
+        if: steps.check_diff.outputs.changed == 'true' || steps.check_pr.outputs.my_pr_found == 'true'
+        run: git push origin HEAD --force
 
       - name: Create or update PR
-        if: steps.check_diff.outputs.changed == 'true'
+        if: steps.check_diff.outputs.changed == 'true' || steps.check_pr.outputs.my_pr_found == 'true'
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GH_TOKEN }}
