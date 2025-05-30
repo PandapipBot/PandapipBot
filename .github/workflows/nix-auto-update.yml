@@ -44,6 +44,25 @@ jobs:
           git remote add upstream "https://github.com/${{ env.UPSTREAM_NIXPKGS_REPO }}.git"
           git remote set-url origin "https://github.com/${{ env.PERSONAL_NIXPKGS_REPO }}.git"
 
+      - name: Get current version
+        id: get_current
+        run: |
+          current_version=$(nix-instantiate --eval -E "with import ./. {}; lib.getVersion ${{
+            matrix.package }}" | tr -d '"')
+          echo "version=$current_version" >> $GITHUB_OUTPUT
+
+      - name: Run update.nix (1st pass)
+        run: |
+          nix-shell maintainers/scripts/update.nix --argstr package "${{ matrix.package }}" --argstr skip-prompt true
+
+      - name: Get new version
+        id: get_new
+        run: |
+          version=$(nix-instantiate --eval -E "with import ./. {}; lib.getVersion ${{
+            matrix.package }}" | tr -d '"')
+          echo "version=$version" >> $GITHUB_OUTPUT
+          git checkout .
+
       - name: Check existing PRs
         id: check_pr
         uses: actions/github-script@v7
@@ -84,25 +103,18 @@ jobs:
 
       - name: Switch to branch
         run: |
-          if [[ ${{ steps.check_pr.outputs.my_pr_found }} ]]; then
+          if [[ "${{ steps.check_pr.outputs.my_pr_found }}" == "true" ]]; then
             echo "Existing PR branch exists. Rebasing..."
-            git fetch "origin/${{ steps.check_pr.outputs.branch }}"
-            git fetch upstream/master
-            git checkout "origin/${{ steps.check_pr.outputs.branch }}"
+            git fetch origin "${{ steps.check_pr.outputs.branch }}"
+            git fetch upstream master
+            git checkout -b "${{ steps.check_pr.outputs.branch }}" "origin/${{ steps.check_pr.outputs.branch }}"
             git rebase upstream/master
           else
             echo "Branch does not exist. Creating new from upstream/master..."
             git checkout -b "${{ steps.check_pr.outputs.branch }}" upstream/master
           fi
 
-      - name: Get current version
-        id: get_current
-        run: |
-          current_version=$(nix-instantiate --eval -E "with import ./. {}; lib.getVersion ${{ matrix.package }}" | tr -d '"')
-          echo "version=$current_version" >> $GITHUB_OUTPUT
-
-      - name: Run update.nix
-        id: update
+      - name: Run update.nix (2nd pass)
         run: |
           nix-shell maintainers/scripts/update.nix --argstr package "${{ matrix.package }}" --argstr skip-prompt true
 
@@ -115,13 +127,6 @@ jobs:
           else
             echo "changed=true" >> $GITHUB_OUTPUT
           fi
-
-      - name: Get new version
-        if: steps.check_diff.outputs.changed == 'true' || steps.check_pr.outputs.my_pr_found == 'true'
-        id: get_new
-        run: |
-          new_version=$(nix-instantiate --eval -E "with import ./. {}; lib.getVersion ${{ matrix.package }}" | tr -d '"')
-          echo "version=$new_version" >> $GITHUB_OUTPUT
 
       - name: Commit changes
         if: steps.check_diff.outputs.changed == 'true'
@@ -141,7 +146,7 @@ jobs:
           script: |
             const [baseOwner, baseRepo] = `${{ env.UPSTREAM_NIXPKGS_REPO }}`.split("/");
             const [headOwner] = `${{ env.PERSONAL_NIXPKGS_REPO }}`.split("/");
-            const headBranch = `${{ env.BRANCH_PREFIX }}${{ matrix.package }}-${{ steps.get_new.outputs.version }}`;
+            const headBranch = `${{ steps.check_pr.outputs.branch }}`;
             const title = `${{ matrix.package }}: ${{ steps.get_current.outputs.version }} -> ${{ steps.get_new.outputs.version }}`;
             const body = `
             ### Automatic Update for \`${{ matrix.package }}\`
@@ -153,7 +158,7 @@ jobs:
 
             const headRef = `${headOwner}:${headBranch}`;
 
-            if (${{ steps.check_pr.outputs.my_pr_found }}) {
+            if ("${{ steps.check_pr.outputs.my_pr_found }}" === "true") {
               core.info(`Updating PR #${{ steps.check_pr.outputs.existing_pr }}...`);
               await github.rest.pulls.update({
                 owner: baseOwner,
@@ -162,7 +167,7 @@ jobs:
                 title,
                 body
               });
-            } else if (!${{ steps.check_pr.outputs.pr_found }}) {
+            } else if ("${{ steps.check_pr.outputs.pr_found }}" === "false") {
               core.info(`Creating new PR from ${headRef} to ${baseOwner}/${baseRepo}:${base}`);
               await github.rest.pulls.create({
                 owner: baseOwner,
