@@ -134,7 +134,12 @@ jobs:
             echo "Existing PR branch exists. Rebasing..."
             git fetch --depth=1 origin "${{ steps.check_pr.outputs.branch }}"
             git checkout -b "${{ steps.check_pr.outputs.branch }}" "origin/${{ steps.check_pr.outputs.branch }}"
-            git rebase "upstream/${{ env.UPSTREAM_DEFAULT_BRANCH }}"
+            if ! git rebase "upstream/${{ env.UPSTREAM_DEFAULT_BRANCH }}"; then
+              echo "Rebase failed. Showing git status and diff:"
+              git status
+              git diff
+              exit 1
+            fi
           else
             echo "Branch does not exist. Creating new from upstream/master..."
             git checkout -b "${{ steps.check_pr.outputs.branch }}" upstream/master
