@@ -137,6 +137,22 @@ jobs:
             echo "Existing PR branch exists. Rebasing..."
             git fetch --depth 1 origin "${{ steps.check_pr.outputs.branch }}"
             git fetch --depth 1 upstream "${{ env.UPSTREAM_DEFAULT_BRANCH }}"
+
+            FETCH_DEPTH=1
+            while true; do
+              BASE=$(git merge-base $ORIGIN_REPO/$BRANCH $UPSTREAM_REPO/$UPSTREAM || echo "")
+
+              if [[ -n "$BASE" ]]; then
+                echo "Found merge base: $BASE"
+                break
+              fi
+
+              FETCH_DEPTH=$(( FETCH_DEPTH * 2 ))
+              echo "Fetching to depth $FETCH_DEPTH"
+              git fetch --depth $FETCH_DEPTH $ORIGIN_REPO "$BRANCH"
+              git fetch --depth $FETCH_DEPTH $UPSTREAM_REPO "$UPSTREAM"
+            done
+
             git checkout -b "${{ steps.check_pr.outputs.branch }}" "origin/${{ steps.check_pr.outputs.branch }}"
 
             if ! git rebase --merge upstream/master; then
