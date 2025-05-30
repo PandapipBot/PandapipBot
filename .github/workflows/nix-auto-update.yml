@@ -54,7 +54,7 @@ jobs:
           git config --global core.attributesfile ~/.gitattributes
           echo '* merge=mergiraf' >> ~/.gitattributes
           git remote add upstream "https://github.com/${{ env.UPSTREAM_NIXPKGS_REPO }}.git"
-          git fetch --depth=1 upstream "${{ env.UPSTREAM_DEFAULT_BRANCH }}"
+          git fetch upstream "${{ env.UPSTREAM_DEFAULT_BRANCH }}"
           git reset --hard "upstream/${{ env.UPSTREAM_DEFAULT_BRANCH }}"
 
       - name: Get current version
@@ -135,8 +135,8 @@ jobs:
           set -xeuo pipefail
           if [[ "${{ steps.check_pr.outputs.my_pr_found }}" == "true" ]]; then
             echo "Existing PR branch exists. Rebasing..."
-            git fetch --depth=1 origin "${{ steps.check_pr.outputs.branch }}"
-            git fetch --depth=1 upstream "${{ env.UPSTREAM_DEFAULT_BRANCH }}"
+            git fetch origin "${{ steps.check_pr.outputs.branch }}"
+            git fetch upstream "${{ env.UPSTREAM_DEFAULT_BRANCH }}"
             git checkout -b "${{ steps.check_pr.outputs.branch }}" upstream/"${{ env.UPSTREAM_DEFAULT_BRANCH }}"
 
             BASE=$(git merge-base origin/${{ steps.check_pr.outputs.branch }} upstream/${{ env.UPSTREAM_DEFAULT_BRANCH }})
