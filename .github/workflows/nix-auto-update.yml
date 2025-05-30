@@ -140,7 +140,7 @@ jobs:
 
             FETCH_DEPTH=1
             while true; do
-              BASE=$(git merge-base $ORIGIN_REPO/$BRANCH $UPSTREAM_REPO/$UPSTREAM || echo "")
+              BASE=$(git merge-base "origin/${{ steps.check_pr.outputs.branch }}" "upstream/${{ env.UPSTREAM_DEFAULT_BRANCH }}" || echo "")
 
               if [[ -n "$BASE" ]]; then
                 echo "Found merge base: $BASE"
