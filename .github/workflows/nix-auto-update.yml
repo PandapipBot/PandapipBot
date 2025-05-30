@@ -23,6 +23,7 @@ jobs:
       PERSONAL_NIXPKGS_REPO: PandapipBot/nixpkgs
       UPSTREAM_NIXPKGS_REPO: NixOS/nixpkgs
       BRANCH_PREFIX: auto-update/
+      EMAIL: gavinnjohn+githubrobot@gmail.com
       USERNAME: PandapipBot
       GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
       GH_DEBUG: "1"
@@ -41,7 +42,7 @@ jobs:
         run: |
           set -euo pipefail
           git config --global user.name "${{ env.USERNAME }}"
-          git config --global user.email "gavinnjohn+githubrobot@gmail.com"
+          git config --global user.email "{{ env.EMAIL }}"
           git remote add upstream "https://github.com/${{ env.UPSTREAM_NIXPKGS_REPO }}.git"
           git checkout upstream/master
 
