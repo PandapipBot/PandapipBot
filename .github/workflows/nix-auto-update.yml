@@ -12,7 +12,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        package: [ gpredict-unstable ]
+        package:
+          - gpredict-unstable
+          - vscode-extensions.zaaack.markdown-editor
+          - vscode-extensions.yzane.markdown-pdf
+          - vscode-extensions.reditorsupport.r
+          - vscode-extensions.ms-vscode-remote.remote-ssh-edit
+          - vscode-extensions.garlicbreadcleric.pandoc-markdown-syntax
+          - vscode-extensions.chrischinchilla.vscode-pandoc
+          - vscode-extensions.bierner.github-markdown-preview
 
     env:
       PERSONAL_NIXPKGS_REPO: PandapipBot/nixpkgs
