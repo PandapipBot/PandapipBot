@@ -26,6 +26,7 @@ jobs:
       PERSONAL_NIXPKGS_REPO: PandapipBot/nixpkgs
       UPSTREAM_NIXPKGS_REPO: NixOS/nixpkgs
       UPSTREAM_DEFAULT_BRANCH: master
+      UPSTREAM_CACHED_BRANCH: nixos-unstable
       BRANCH_PREFIX: auto-update/
       EMAIL: gavinnjohn+githubrobot@gmail.com
       USERNAME: PandapipBot
@@ -57,8 +58,8 @@ jobs:
           git config --global core.attributesfile ~/.gitattributes
           echo '* merge=mergiraf' >> ~/.gitattributes
           git remote add upstream "https://github.com/${{ env.UPSTREAM_NIXPKGS_REPO }}.git"
-          git fetch --depth 1 upstream "${{ env.UPSTREAM_DEFAULT_BRANCH }}"
-          git reset --hard "upstream/${{ env.UPSTREAM_DEFAULT_BRANCH }}"
+          git fetch --depth 1 upstream "${{ env.UPSTREAM_CACHED_BRANCH }}"
+          git reset --hard "upstream/${{ env.UPSTREAM_CACHED_BRANCH }}"
 
       - name: Get current version
         id: get_current
@@ -143,7 +144,7 @@ jobs:
 
             FETCH_DEPTH=1
             while true; do
-              BASE=$(git merge-base "origin/${{ steps.check_pr.outputs.branch }}" "upstream/${{ env.UPSTREAM_DEFAULT_BRANCH }}" || echo "")
+              BASE=$(git merge-base "origin/${{ steps.check_pr.outputs.branch }}" "upstream/${{ env.UPSTREAM_CACHED_BRANCH }}" || echo "")
 
               if [[ -n "$BASE" ]]; then
                 echo "Found merge base: $BASE"
