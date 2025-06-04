@@ -159,15 +159,16 @@ jobs:
 
             git checkout -b "${{ steps.check_pr.outputs.branch }}" "origin/${{ steps.check_pr.outputs.branch }}"
 
-            if ! git rebase --merge "${{ env.UPSTREAM_CACHED_BRANCH }}"; then
+            if ! git rebase --merge "upstream/${{ env.UPSTREAM_CACHED_BRANCH }}"; then
               echo "Conflict applying commit $commit"
               git status
               git diff
               exit 1
             fi
           else
-            echo "Branch does not exist. Creating new from ${{ env.UPSTREAM_CACHED_BRANCH }}..."
-            git checkout -b "${{ steps.check_pr.outputs.branch }}" "${{ env.UPSTREAM_CACHED_BRANCH }}"
+            echo "Branch does not exist. Creating new from upstream/${{ env.UPSTREAM_CACHED_BRANCH }}..."
+            git fetch --depth 1 upstream "${{ env.UPSTREAM_CACHED_BRANCH }}"
+            git checkout -b "${{ steps.check_pr.outputs.branch }}" "upstream/${{ env.UPSTREAM_CACHED_BRANCH }}"
           fi
 
       - name: Run update.nix (2nd pass)
