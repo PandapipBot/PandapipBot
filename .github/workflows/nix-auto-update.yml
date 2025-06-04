@@ -34,7 +34,7 @@ jobs:
 
     steps:
       - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
+        uses: DeterminateSystems/nix-installer-action@v17
 
       - name: Install Mergiraf
         run: |
