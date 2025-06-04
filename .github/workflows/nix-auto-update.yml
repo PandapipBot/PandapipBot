@@ -42,7 +42,7 @@ jobs:
           sudo snap install mergiraf
 
       - name: Checkout nixpkgs
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
           repository: ${{ env.PERSONAL_NIXPKGS_REPO }}
           token: ${{ secrets.GH_TOKEN }}
@@ -83,7 +83,7 @@ jobs:
 
       - name: Check existing PRs
         id: check_pr
-        uses: actions/github-script@v7
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7
         with:
           github-token: ${{ secrets.GH_TOKEN }}
           script: |
@@ -202,7 +202,7 @@ jobs:
 
       - name: Create or update PR
         if: steps.check_diff.outputs.changed == 'true' || steps.check_pr.outputs.my_pr_found == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7
         with:
           github-token: ${{ secrets.GH_TOKEN }}
           script: |
