@@ -3,8 +3,8 @@ name: Auto Update Nix Packages
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 6 * * *'  # Run daily at 6am UTC
+  #schedule:
+  #  - cron: '0 6 * * *'  # Run daily at 6am UTC
 
 jobs:
   update-package:
