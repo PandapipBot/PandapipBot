@@ -107,7 +107,7 @@ jobs:
               });
 
               for (const pr of fetchedPRs.data) {
-                if (pr.title.startsWith(`${{ matrix.package }}:`) && pr.title.includes('->')) {
+                if ((pr.title.startsWith(`${{ matrix.package }}:`) && pr.title.includes('->')) || pr.head.ref === branch) {
                   console.log(`Found PR:`);
                   console.dir(pr);
                   prFound = true;
