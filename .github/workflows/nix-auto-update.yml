@@ -59,7 +59,8 @@ jobs:
           echo '* merge=mergiraf' >> ~/.gitattributes
           git remote add upstream "https://github.com/${{ env.UPSTREAM_NIXPKGS_REPO }}.git"
           git fetch --depth 1 upstream "${{ env.UPSTREAM_CACHED_BRANCH }}"
-          git reset --hard "upstream/${{ env.UPSTREAM_CACHED_BRANCH }}"
+          git fetch --depth 1 upstream "${{ env.UPSTREAM_DEFAULT_BRANCH }}"
+          git reset --hard "upstream/${{ env.UPSTREAM_DEFAULT_BRANCH }}"
 
       - name: Get current version
         id: get_current
@@ -67,6 +68,11 @@ jobs:
           set -xeuo pipefail
           current_version=$(nix-instantiate --eval -E "with import ./. {}; lib.getVersion ${{ matrix.package }}" | tr -d '"')
           echo "version=$current_version" >> $GITHUB_OUTPUT
+
+      - name: Switch to cached branch
+        run: |
+          set -xeuo pipefail
+          git reset --hard "upstream/${{ env.UPSTREAM_CACHED_BRANCH }}"
 
       - name: Run update.nix (1st pass)
         run: |
