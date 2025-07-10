@@ -13,14 +13,32 @@ jobs:
       fail-fast: false
       matrix:
         package:
+          - cpm-cmake
+          - envision
+          - goocanvas
+          - gpredict
           - gpredict-unstable
-          - vscode-extensions.zaaack.markdown-editor
-          - vscode-extensions.yzane.markdown-pdf
-          - vscode-extensions.reditorsupport.r
-          - vscode-extensions.ms-vscode-remote.remote-ssh-edit
-          - vscode-extensions.garlicbreadcleric.pandoc-markdown-syntax
-          - vscode-extensions.chrischinchilla.vscode-pandoc
+          - intel-undervolt
+          - localsend
+          - motoc
+          - oscavmgr
+          - python3Packages.kaleido
+          - python3Packages.dendropy
+          - python3Packages.kneaddata
+          - python3Packages.nptyping
+          - python3Packages.optree
+          - python3Packages.plotly
+          - qgroundcontrol
+          - qhexedit2
+          - stalwart-mail
           - vscode-extensions.bierner.github-markdown-preview
+          - vscode-extensions.chrischinchilla.vscode-pandoc
+          - vscode-extensions.garlicbreadcleric.pandoc-markdown-syntax
+          - vscode-extensions.ms-vscode-remote.remote-ssh-edit
+          - vscode-extensions.reditorsupport.r
+          - vscode-extensions.yzane.markdown-pdf
+          - vscode-extensions.zaaack.markdown-editor
+          - waycheck
 
     env:
       PERSONAL_NIXPKGS_REPO: PandapipBot/nixpkgs
