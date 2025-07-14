@@ -215,7 +215,7 @@ jobs:
         id: check_semver
         shell: python
         run: |
-          import sys
+          import os, sys
           from packaging.version import parse as V
           old = V("${{ steps.get_current.outputs.version }}")
           new = V("${{ steps.get_new.outputs.version }}")
@@ -237,7 +237,6 @@ jobs:
           git push -u origin "${{ steps.check_pr.outputs.branch }}" --force
 
       - name: Create or update PR
-        if: always()
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7
         with:
           github-token: ${{ secrets.GH_TOKEN }}
