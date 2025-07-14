@@ -211,21 +211,33 @@ jobs:
             echo "changed=true" >> $GITHUB_OUTPUT
           fi
 
+      - name: Check for downgrade or no-op
+        id: check_semver
+        shell: python
+        run: |
+          import sys
+          from packaging.version import parse as V
+          old = V("${{ steps.get_current.outputs.version }}")
+          new = V("${{ steps.get_new.outputs.version }}")
+          upgrade_needed = new > old
+          with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
+              fh.write(f"upgrade_needed={str(upgrade_needed).lower()}\n")
+
       - name: Commit changes
-        if: steps.check_diff.outputs.changed == 'true'
+        if: steps.check_diff.outputs.changed == 'true' && steps.check_semver.outputs.upgrade_needed == 'true'
         run: |
           set -xeuo pipefail
           git add -u
           git commit -m "${{ matrix.package }}: ${{ steps.get_current.outputs.version }} -> ${{ steps.get_new.outputs.version }}"
 
       - name: Push changes
-        if: steps.check_diff.outputs.changed == 'true' || steps.check_pr.outputs.my_pr_found == 'true'
+        if: (steps.check_diff.outputs.changed == 'true' && steps.check_semver.outputs.upgrade_needed == 'true') || steps.check_pr.outputs.my_pr_found == 'true'
         run: |
           set -xeuo pipefail
           git push -u origin "${{ steps.check_pr.outputs.branch }}" --force
 
       - name: Create or update PR
-        if: steps.check_diff.outputs.changed == 'true' || steps.check_pr.outputs.my_pr_found == 'true'
+        if: always()
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7
         with:
           github-token: ${{ secrets.GH_TOKEN }}
@@ -244,16 +256,31 @@ jobs:
 
             const headRef = `${headOwner}:${headBranch}`;
 
-            if ("${{ steps.check_pr.outputs.my_pr_found }}" === "true") {
-              core.info(`Updating PR #${{ steps.check_pr.outputs.existing_pr }}...`);
-              await github.rest.pulls.update({
-                owner: baseOwner,
-                repo: baseRepo,
-                pull_number: Number("${{ steps.check_pr.outputs.existing_pr }}"),
-                title,
-                body
-              });
-            } else if ("${{ steps.check_pr.outputs.pr_found }}" === "false") {
+            const myPrFound = "${{ steps.check_pr.outputs.my_pr_found }}" === "true";
+            const myPrNumber = Number("${{ steps.check_pr.outputs.existing_pr }}");
+            const prFound = "${{ steps.check_pr.outputs.pr_found }}" === "true";
+            const upgradeNeeded = ("${{steps.check_diff.outputs.changed}}" == "true") && ("${{ steps.check_semver.outputs.upgrade_needed }}" === "true");
+
+            if (myPrFound) {
+              if (!upgradeNeeded || prFound) {
+                core.info(`Upgrade no longer needed. Closing PR ${myPrNumber}`);
+                await github.rest.pulls.update({
+                  owner: baseOwner,
+                  repo: baseRepo,
+                  pull_number: myPrNumber,
+                  state: "closed"
+                });
+              } else {
+                core.info(`Updating PR #${myPrNumber}...`);
+                await github.rest.pulls.update({
+                  owner: baseOwner,
+                  repo: baseRepo,
+                  pull_number: myPrNumber,
+                  title,
+                  body
+                });
+              }
+            } else if (upgradeNeeded && !prFound) {
               core.info(`Creating new PR from ${headRef} to ${baseOwner}/${baseRepo}:${base}`);
               await github.rest.pulls.create({
                 owner: baseOwner,
