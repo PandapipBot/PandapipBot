@@ -134,12 +134,13 @@ jobs:
                 if ((pr.title.startsWith(`${{ matrix.package }}:`) && pr.title.includes('->')) || pr.head.ref === branch) {
                   console.log(`Found PR:`);
                   console.dir(pr);
-                  prFound = true;
                   if (pr.user.login === process.env.USERNAME) {
                     myPrFound = true;
                     existingPr = pr.number.toString();
                     branch = pr.head.ref;
                     break;
+                  } else {
+                    prFound = true;
                   }
                 } else {
                   console.log(`Ignoring PR: ${pr.number}`);
@@ -257,11 +258,11 @@ jobs:
 
             const myPrFound = "${{ steps.check_pr.outputs.my_pr_found }}" === "true";
             const myPrNumber = Number("${{ steps.check_pr.outputs.existing_pr }}");
-            const prFound = "${{ steps.check_pr.outputs.pr_found }}" === "true";
+            const otherPrFound = "${{ steps.check_pr.outputs.pr_found }}" === "true";
             const upgradeNeeded = ("${{steps.check_diff.outputs.changed}}" == "true") && ("${{ steps.check_semver.outputs.upgrade_needed }}" === "true");
 
             if (myPrFound) {
-              if (!upgradeNeeded || prFound) {
+              if (!upgradeNeeded || otherPrFound) {
                 core.info(`Upgrade no longer needed. Closing PR ${myPrNumber}`);
                 await github.rest.pulls.update({
                   owner: baseOwner,
@@ -279,7 +280,7 @@ jobs:
                   body
                 });
               }
-            } else if (upgradeNeeded && !prFound) {
+            } else if (upgradeNeeded && !otherPrFound) {
               core.info(`Creating new PR from ${headRef} to ${baseOwner}/${baseRepo}:${base}`);
               await github.rest.pulls.create({
                 owner: baseOwner,
