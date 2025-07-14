@@ -13,32 +13,32 @@ jobs:
       fail-fast: false
       matrix:
         package:
-          - cpm-cmake
-          - envision-unwrapped
-          - goocanvas
-          - gpredict
-          - gpredict-unstable
-          - intel-undervolt
-          - localsend
-          - motoc
-          - oscavmgr
-          - python3Packages.kaleido
-          - python3Packages.dendropy
-          - python3Packages.kneaddata
-          - python3Packages.nptyping
+          # - cpm-cmake
+          # - envision-unwrapped
+          # - goocanvas
+          # - gpredict
+          # - gpredict-unstable
+          # - intel-undervolt
+          # - localsend
+          # - motoc
+          # - oscavmgr
+          # - python3Packages.kaleido
+          # - python3Packages.dendropy
+          # - python3Packages.kneaddata
+          # - python3Packages.nptyping
           - python3Packages.optree
-          - python3Packages.plotly
-          - qgroundcontrol
-          - qhexedit2
-          - stalwart-mail
-          - vscode-extensions.bierner.github-markdown-preview
-          - vscode-extensions.chrischinchilla.vscode-pandoc
-          - vscode-extensions.garlicbreadcleric.pandoc-markdown-syntax
-          - vscode-extensions.ms-vscode-remote.remote-ssh-edit
-          - vscode-extensions.reditorsupport.r
-          - vscode-extensions.yzane.markdown-pdf
-          - vscode-extensions.zaaack.markdown-editor
-          - waycheck
+          # - python3Packages.plotly
+          # - qgroundcontrol
+          # - qhexedit2
+          # - stalwart-mail
+          # - vscode-extensions.bierner.github-markdown-preview
+          # - vscode-extensions.chrischinchilla.vscode-pandoc
+          # - vscode-extensions.garlicbreadcleric.pandoc-markdown-syntax
+          # - vscode-extensions.ms-vscode-remote.remote-ssh-edit
+          # - vscode-extensions.reditorsupport.r
+          # - vscode-extensions.yzane.markdown-pdf
+          # - vscode-extensions.zaaack.markdown-editor
+          # - waycheck
 
     env:
       PERSONAL_NIXPKGS_REPO: PandapipBot/nixpkgs
@@ -112,9 +112,14 @@ jobs:
           github-token: ${{ secrets.GH_TOKEN }}
           script: |
             const [owner, repo] = process.env.UPSTREAM_NIXPKGS_REPO.split("/");
+            const targetVersion = "${{ steps.get_new.outputs.version }}";
+            const packageName = "${{ matrix.package }}";
+            const expectedBranch = `${process.env.BRANCH_PREFIX}${packageName}-${targetVersion}`;
+            const botUser = process.env.USERNAME;
 
             let prFound = false;
             let myPrFound = false;
+            let closedSameUpgradeFound = false;
             let existingPr = "";
             let branch = `${process.env.BRANCH_PREFIX}${{ matrix.package }}-${{ steps.get_new.outputs.version }}`;
 
@@ -125,32 +130,39 @@ jobs:
               const fetchedPRs = await github.rest.pulls.list({
                 owner,
                 repo,
-                state: 'open',
                 per_page: perPage,
                 page,
               });
 
               for (const pr of fetchedPRs.data) {
-                if ((pr.title.startsWith(`${{ matrix.package }}:`) && pr.title.includes('->')) || pr.head.ref === branch) {
-                  console.log(`Found PR:`);
-                  console.dir(pr);
-                  if (pr.user.login === process.env.USERNAME) {
-                    myPrFound = true;
-                    existingPr = pr.number.toString();
-                    branch = pr.head.ref;
-                    break;
+                const isUpgradeTitle = pr.title.startsWith(`${packageName}:`) && pr.title.includes("->");
+                const titleVersionMatch = new RegExp(`${packageName}:\\s.*->\\s${targetVersion.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`).test(pr.title);
+                const isMe = pr.user.login === botUser;
+                const branchMatch = pr.head.ref === branch;
+                if (pr.state === "open") {
+                  if (isUpgradeTitle || branchMatch) {
+                    console.log(`Found PR:`);
+                    console.dir(pr);
+                    if (isMe) {
+                      myPrFound = true;
+                      existingPr = pr.number.toString();
+                      branch = pr.head.ref;
+                    } else {
+                      prFound = true;
+                    }
                   } else {
-                    prFound = true;
+                    console.log(`Ignoring PR: ${pr.number}`);
                   }
-                } else {
-                  console.log(`Ignoring PR: ${pr.number}`);
+                } else if (pr.state == "closed") {
+                  if (isBot && !pr.merged_at && titleVersionMatch) {
+                    closedSameUpgradeFound = true;
+                    console.log(`Found closed, unmerged PR by bot for same version:`);
+                    console.dir(pr);
+                  }
                 }
               }
 
-              if (myPrFound || fetchedPRs.data.length < perPage) {
-                break;
-              }
-
+              if (prs.length < perPage) break;
               page++;
             }
 
@@ -158,6 +170,7 @@ jobs:
             core.setOutput("my_pr_found", myPrFound.toString());
             core.setOutput("branch", branch);
             core.setOutput("existing_pr", existingPr);
+            core.setOutput("closed_same_upgrade", closedSameUpgradeFound.toString());
 
       - name: Switch to branch
         run: |
