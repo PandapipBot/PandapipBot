@@ -69,7 +69,7 @@ jobs:
         run: |
           set -xeuo pipefail
           git config --global user.name "${{ env.USERNAME }}"
-          git config --global user.email "{{ env.EMAIL }}"
+          git config --global user.email "${{ env.EMAIL }}"
           git config --global merge.conflictStyle diff3
           git config --global merge.mergiraf.name mergiraf
           git config --global merge.mergiraf.driver 'mergiraf merge --git %O %A %B -s %S -x %X -y %Y -p %P -l %L'
@@ -115,7 +115,6 @@ jobs:
             const targetVersion = "${{ steps.get_new.outputs.version }}";
             const packageName = "${{ matrix.package }}";
             const expectedBranch = `${process.env.BRANCH_PREFIX}${packageName}-${targetVersion}`;
-            const botUser = process.env.USERNAME;
 
             let prFound = false;
             let myPrFound = false;
@@ -137,7 +136,7 @@ jobs:
               for (const pr of fetchedPRs.data) {
                 const isUpgradeTitle = pr.title.startsWith(`${packageName}:`) && pr.title.includes("->");
                 const titleVersionMatch = new RegExp(`${packageName}:\\s.*->\\s${targetVersion.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`).test(pr.title);
-                const isMe = pr.user.login === botUser;
+                const isMe = pr.user.login === process.env.USERNAME;
                 const branchMatch = pr.head.ref === branch;
                 if (pr.state === "open") {
                   if (isUpgradeTitle || branchMatch) {
@@ -154,7 +153,7 @@ jobs:
                     console.log(`Ignoring PR: ${pr.number}`);
                   }
                 } else if (pr.state == "closed") {
-                  if (isBot && !pr.merged_at && titleVersionMatch) {
+                  if (isMe && !pr.merged_at && titleVersionMatch) {
                     closedSameUpgradeFound = true;
                     console.log(`Found closed, unmerged PR by bot for same version:`);
                     console.dir(pr);
@@ -162,7 +161,7 @@ jobs:
                 }
               }
 
-              if (prs.length < perPage) break;
+              if (fetchedPRs.data.length < perPage) break;
               page++;
             }
 
@@ -272,10 +271,12 @@ jobs:
             const myPrFound = "${{ steps.check_pr.outputs.my_pr_found }}" === "true";
             const myPrNumber = Number("${{ steps.check_pr.outputs.existing_pr }}");
             const otherPrFound = "${{ steps.check_pr.outputs.pr_found }}" === "true";
-            const upgradeNeeded = ("${{steps.check_diff.outputs.changed}}" == "true") && ("${{ steps.check_semver.outputs.upgrade_needed }}" === "true");
+            const closedSameUpgrade = "${{ steps.check_pr.outputs.closed_same_upgrade }}" === "true";
+            const hasDiff = "${{steps.check_diff.outputs.changed}}" === "true";
+            const upgradeNeeded = "${{ steps.check_semver.outputs.upgrade_needed }}" === "true";
 
             if (myPrFound) {
-              if (!upgradeNeeded || otherPrFound) {
+              if (!upgradeNeeded || !hasDiff || otherPrFound) {
                 core.info(`Upgrade no longer needed. Closing PR ${myPrNumber}`);
                 await github.rest.pulls.update({
                   owner: baseOwner,
@@ -293,7 +294,7 @@ jobs:
                   body
                 });
               }
-            } else if (upgradeNeeded && !otherPrFound) {
+            } else if (upgradeNeeded && hasDiff && !otherPrFound && !closedSameUpgrade) {
               core.info(`Creating new PR from ${headRef} to ${baseOwner}/${baseRepo}:${base}`);
               await github.rest.pulls.create({
                 owner: baseOwner,
